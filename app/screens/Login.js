@@ -8,14 +8,31 @@ import {
 	ActivityIndicator,
 	StyleSheet
 } from "react-native";
+import Pusher from 'pusher-js/react-native';
+import { useNavigation } from '@react-navigation/native';
 
-// const Pusher = require("pusher");
 
 const Login = () => {
+	const navigation = useNavigation();
+
 	const [userName, setUserName] = useState('');
 	const [loading, setLoading] = useState(false);
 	const [channel, setChannel] = useState();
-	const [pusher, setPusher] = useState(false);
+	const [pusher, setPusher] = useState();
+
+	useEffect(async () => {
+		const initialPusher = await new Pusher('', {
+			authEndpoint: process.env.AUTH_END_POINT,
+			cluster: process.env.CLUSTER,
+			encrypted: true,
+		})
+
+		await setPusher(initialPusher)
+
+		const initialChannel = await pusher.subscribe(`private-user-${userName}`)
+
+		await setChannel(initialChannel)
+	}, [])
 
 	const userLogin = () => {
 		if (userName !== '') {
@@ -23,46 +40,54 @@ const Login = () => {
 		}
 
 
-		setPusher(new Pusher("", {
-			authEndpoint: process.env.AUTH_END_POINT,
-			cluster: process.env.APP_CLUSTER,
-			encrypted: true,
-			auth: {
-				params: { username: userName }
-			}
-		}))
-
-		setChannel(this.pusher.subscribe(`private-user-${userName}`))
-
-		channel.bind("pusher:subscription_error", status => {
-			Alert.alert(
-				"Error",
-				"Subscription error occurred. Please restart the app"
-			);
+		navigation.navigate("Game", {
+			pusher: pusher,
+			username: userName,
+			// opponent: opponent,
+			my_channel: channel
 		});
 
-		channel.bind("pusher:subscription_succeeded", data => {
-			console.log("subscription ok: ", data);
+		// setPusher(new Pusher("", {
+		// 	authEndpoint: process.env.AUTH_END_POINT,
+		// 	cluster: process.env.CLUSTER,
+		// 	encrypted: true,
+		// 	auth: {
+		// 		params: { username: userName }
+		// 	}
+		// }))
+		// console.log('pusher', pusher)
 
-			channel.bind("opponent-found", data => {
-				console.log("opponent found: ", data);
+		// // setChannel(pusher.subscribe(`private-user-${userName}`))
+		// console.log('channel', channel)
+		// channel.bind("pusher:subscription_error", status => {
+		// 	Alert.alert(
+		// 		"Error",
+		// 		"Subscription error occurred. Please restart the app"
+		// 	);
+		// });
 
-				let opponent =
-					setUserName(data.player_one ? data.player_two : data.player_one)
+		// channel.bind("pusher:subscription_succeeded", data => {
+		// 	console.log("subscription ok: ", data);
 
-				Alert.alert("Opponent found!", `${opponent} will take you on!`);
+		// 	channel.bind("opponent-found", data => {
+		// 		console.log("opponent found: ", data);
 
-				setLoading(false);
-				setUserName('');
+		// 		let opponent =
+		// 			setUserName(data.player_one ? data.player_two : data.player_one)
 
-				navigation.navigate("Game", {
-					pusher: pusher,
-					username: userName,
-					opponent: opponent,
-					my_channel: channel
-				});
-			});
-		});
+		// 		Alert.alert("Opponent found!", `${opponent} will take you on!`);
+
+		// 		setLoading(false);
+		// 		setUserName('');
+
+		// 		navigation.navigate("Game", {
+		// 			pusher: pusher,
+		// 			username: userName,
+		// 			opponent: opponent,
+		// 			my_channel: channel
+		// 		});
+		// 	});
+		// });
 	}
 
 	return (
