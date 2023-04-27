@@ -6,88 +6,135 @@ import {
 	Button,
 	Alert,
 	ActivityIndicator,
-	StyleSheet
+	StyleSheet,
+	Image
 } from "react-native";
 import Pusher from 'pusher-js/react-native';
 import { useNavigation } from '@react-navigation/native';
+import {
+	d2, d3, d4, d5, d6, d7, d8, d9, d10, jd, qd, kd, aced,
+	h2, h3, h4, h5, h6, h7, h8, h9, h10, jh, qh, kh, aceh,
+	s2, s3, s4, s5, s6, s7, s8, s9, s10, js, qs, ks, aces,
+	c2, c3, c4, c5, c6, c7, c8, c9, c10, jc, qc, kc, acec
+} from '../../assets/PNG-cards-1.3/index';
 
+const deck = [
+	d2, d3, d4, d5, d6, d7, d8, d9, d10, jd, qd, kd, aced,
+	h2, h3, h4, h5, h6, h7, h8, h9, h10, jh, qh, kh, aceh,
+	s2, s3, s4, s5, s6, s7, s8, s9, s10, js, qs, ks, aces,
+	c2, c3, c4, c5, c6, c7, c8, c9, c10, jc, qc, kc, acec
+]
+
+const shuffle = (array) => {
+	let currentIndex = array.length, randomIndex;
+
+	// While there remain elements to shuffle.
+	while (currentIndex !== 0) {
+
+		// Pick a remaining element.
+		randomIndex = Math.floor(Math.random() * currentIndex);
+		currentIndex--;
+
+		// And swap it with the current element.
+		[array[currentIndex], array[randomIndex]] = [
+			array[randomIndex], array[currentIndex]];
+	}
+
+	return array;
+}
 
 const Login = () => {
 	const navigation = useNavigation();
 
 	const [userName, setUserName] = useState('');
+	const [joinUser, setJoinUser] = useState('');
 	const [loading, setLoading] = useState(false);
-	const [channel, setChannel] = useState();
-	const [pusher, setPusher] = useState();
-
-	useEffect(async () => {
-		const initialPusher = await new Pusher('', {
-			authEndpoint: process.env.AUTH_END_POINT,
-			cluster: process.env.CLUSTER,
-			encrypted: true,
-		})
-
-		await setPusher(initialPusher)
-
-		const initialChannel = await pusher.subscribe(`private-user-${userName}`)
-
-		await setChannel(initialChannel)
-	}, [])
 
 	const userLogin = () => {
-		if (userName !== '') {
+		if (userName !== '' && joinUser === '' || joinUser !== '' && userName !== '') {
 			setLoading(true);
+
+			const pusher = new Pusher(process.env.key, {
+				authEndpoint: "NGROK URL",
+				cluster: process.env.cluster,
+				encrypted: true,
+				auth: {
+					params: {
+						username: userName,
+					}
+				}
+			});
+			const my_channel = pusher.subscribe(`private-user-${joinUser !== '' ? joinUser : userName}`)
+
+			my_channel.bind("pusher:subscription_error", status => {
+				console.log(JSON.stringify(status))
+				Alert.alert(
+					"Error",
+					`${(status)}`
+				);
+				setLoading(false);
+			});
+
+			my_channel.bind("pusher:subscription_succeeded", data => {
+				console.log('pusher:subscription_succeeded')
+
+				my_channel.bind("set-deck", data => {
+					console.log('data.drawPile', data);
+				});
+
+				console.log("subscription ok: ", data);
+
+				my_channel.bind("opponent-found", data => {
+					console.log("opponent found: ", data);
+
+					if (joinUser !== '') {
+						console.log('join user navigation')
+						const opponent = joinUser !== '' ? joinUser : userName
+
+						Alert.alert("Opponent found!", `${opponent} will take you on!`);
+
+						navigation.navigate("Game", {
+							pusher: pusher,
+							username: userName,
+							// opponent: data.player_two,
+							my_channel: my_channel,
+							// playerHand: playerHand,
+							// opponentHand: opponentHand,
+							// drawPile: drawPile,
+							// discardPile: discardPile
+						});
+					} else {
+						console.log("joinUser ", joinUser);
+
+						const opponent = joinUser !== '' ? joinUser : userName
+						const drawPile = shuffle(deck)
+
+						// const playerHand = drawPile.splice(0, 8);
+
+						// const opponentHand = drawPile.splice(0, 8);
+
+						// const discardPile = drawPile.splice(0, 1);
+						// console.log('discardPile login', discardPile)
+
+						Alert.alert("Opponent found!", `${opponent} will take you on!`);
+
+						setLoading(false);
+						setUserName('');
+
+						navigation.navigate("Game", {
+							pusher: pusher,
+							username: userName,
+							opponent: data.player_two,
+							my_channel: my_channel,
+							// playerHand: playerHand,
+							// opponentHand: opponentHand,
+							// drawPile: drawPile,
+							// discardPile: discardPile
+						});
+					}
+				});
+			});
 		}
-
-
-		navigation.navigate("Game", {
-			pusher: pusher,
-			username: userName,
-			// opponent: opponent,
-			my_channel: channel
-		});
-
-		// setPusher(new Pusher("", {
-		// 	authEndpoint: process.env.AUTH_END_POINT,
-		// 	cluster: process.env.CLUSTER,
-		// 	encrypted: true,
-		// 	auth: {
-		// 		params: { username: userName }
-		// 	}
-		// }))
-		// console.log('pusher', pusher)
-
-		// // setChannel(pusher.subscribe(`private-user-${userName}`))
-		// console.log('channel', channel)
-		// channel.bind("pusher:subscription_error", status => {
-		// 	Alert.alert(
-		// 		"Error",
-		// 		"Subscription error occurred. Please restart the app"
-		// 	);
-		// });
-
-		// channel.bind("pusher:subscription_succeeded", data => {
-		// 	console.log("subscription ok: ", data);
-
-		// 	channel.bind("opponent-found", data => {
-		// 		console.log("opponent found: ", data);
-
-		// 		let opponent =
-		// 			setUserName(data.player_one ? data.player_two : data.player_one)
-
-		// 		Alert.alert("Opponent found!", `${opponent} will take you on!`);
-
-		// 		setLoading(false);
-		// 		setUserName('');
-
-		// 		navigation.navigate("Game", {
-		// 			pusher: pusher,
-		// 			username: userName,
-		// 			opponent: opponent,
-		// 			my_channel: channel
-		// 		});
-		// 	});
-		// });
 	}
 
 	return (
@@ -104,6 +151,16 @@ const Login = () => {
 					}}
 					value={userName}
 					placeHolder='Enter username'
+					onPress
+				/>
+				<Text>Join another user</Text>
+				<TextInput
+					style={styles.input}
+					onChangeText={e => {
+						setJoinUser(e);
+					}}
+					value={joinUser}
+					placeHolder='Enter other players username'
 					onPress
 				/>
 				{!loading && (
