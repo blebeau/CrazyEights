@@ -7,16 +7,17 @@ import {
 	Alert,
 	ActivityIndicator,
 	StyleSheet,
-	Image
+	Image,
+	TouchableOpacity
 } from "react-native";
 import { useNavigation } from '@react-navigation/native';
-// import { shuffle } from '../../shuffle';
 import { ScrollView } from 'react-native-gesture-handler';
 import {
 	d2, d3, d4, d5, d6, d7, d8, d9, d10, jd, qd, kd, aced,
 	h2, h3, h4, h5, h6, h7, h8, h9, h10, jh, qh, kh, aceh,
 	s2, s3, s4, s5, s6, s7, s8, s9, s10, js, qs, ks, aces,
-	c2, c3, c4, c5, c6, c7, c8, c9, c10, jc, qc, kc, acec
+	c2, c3, c4, c5, c6, c7, c8, c9, c10, jc, qc, kc, acec,
+	backOfCard
 } from '../../assets/PNG-cards-1.3/index';
 
 const deck = [
@@ -52,68 +53,84 @@ const Game = ({ route }) => {
 	const navigation = useNavigation();
 	const pusher = route.params.pusher;
 	const my_channel = route.params.my_channel;
-	const playerHandInitial = route.params.playerHand;
-	const opponentHandInitial = route.params.opponentHand;
-	const drawPileInitial = route.params.drawPile;
+	const joinUser = route.params.joinUser;
 
-	const discardPileInitial = route.params.discardPile;
-	let opponent_channel = null;
+	// const [cardsInHand, setCardsInHand] = useState(8);
+	const [playerHand, setPlayerHand] = useState([]);
+	const [opponentHand, setOpponentHand] = useState([]);
+	const [drawPile, setDrawPile] = useState([]);
+	const [discardPile, setDiscardPile] = useState([]);
+	const [gameStarted, setGameStarted] = useState(false);
 
-	const [playerHand, setPlayerHand] = useState(playerHandInitial);
-	const [opponentHand, setOpponentHand] = useState(opponentHandInitial);
-	const [drawPile, setDrawPile] = useState(drawPileInitial);
-	const [discardPile, setDiscardPile] = useState(discardPileInitial);
+	const startGame = () => {
+		console.log('pressed 1')
+		const drawPileInitial = shuffle(deck)
+		console.log('pressed 2', drawPileInitial)
+
+		const playerHandInitial = drawPileInitial.splice(0, 8);
+
+		const opponentHandInitial = drawPileInitial.splice(0, 8);
+
+		const discardPileInitial = drawPileInitial.splice(0, 1);
+
+		console.log('pressed - username', username)
+		// console.log('pressed - pusher', pusher)
+		my_channel.trigger(
+			"client-game-state",
+			{
+				playerHand: playerHandInitial,
+				opponentHand: opponentHandInitial,
+				discardPile: discardPileInitial,
+				drawPile: drawPileInitial,
+			}
+		);
+		console.log('drawPile - after state set trigger', drawPile)
+		console.log('opponentHand - after state set trigger', opponentHand)
+		console.log('discardPile - after state set trigger', discardPile)
+		console.log('opponentHand - after state set trigger', opponentHand)
+
+		setGameStarted(true)
+
+	}
 
 	// set user hands
 	useEffect(() => {
+		// const opponent = joinUser !== '' ? joinUser : userName
 		const drawPile = shuffle(deck)
 
-		my_channel.bind("initiate-game", data => {
-			setPlayerHand(data.playerHand);
+		my_channel.bind("client-draw-card", data => {
+			console.log('client-draw-card card', data.card)
+			console.log('client-draw-card playerHand', data.playerHand)
+			console.log('playerHand', playerHand)
+
+			setPlayerHand([...data.playerHand, data.card]);
+		});
+
+		my_channel.bind("client-game-state", data => {
+			console.log('client-game-state data', data)
+
 			setOpponentHand(data.opponentHand);
+			setPlayerHand(data.playerHand);
+			setDrawPile(data.drawPile);
 			setDiscardPile(data.discardPile);
-			setDrawPile(drawPile);
-		});
-
-		console.log('discardPile', discardPile);
-		console.log('playerHand', playerHand);
-		console.log('opponentHand', opponentHand);
-
-		my_channel.bind("draw-card", data => {
-			setPlayerHand(...playerHand, data.card);
-		});
-
-		my_channel.bind("winner", data => {
-			setPlayerHand(...playerHand, data.card);
-		});
-
-		console.log('my_channel after bindingings', my_channel)
-
-		console.log('username', username)
-		console.log('opponentName', opponentName)
-		my_channel.trigger(`client-private-user-${username !== opponentName ? username : opponentName}`,
-			"client-set-deck", {
-			drawPile: drawPile,
-		});
-
-		my_channel.trigger("client-initiate-game", {
-			playerHand: playerHand,
-			opponentHand: opponentHand,
-			discardPile: discardPile,
-			playerHand: playerHand,
-		});
-
-		my_channel.trigger("client-set-deck", {
-			playerHand: playerHand,
-			opponentHand: opponentHand,
-			discardPile: discardPile,
-			drawPile: drawPile,
-		});
-
-		my_channel.trigger("client-set-player-hand", {
-			hand: playerHand,
-		});
+		})
 	}, [])
+
+	useEffect(() => {
+		console.log('useEffect draw pile', drawPile)
+	}, [drawPile])
+
+	useEffect(() => {
+		console.log('useEffect playerHand', playerHand)
+	}, [playerHand])
+
+	useEffect(() => {
+		console.log('useEffect opponentHand', opponentHand)
+	}, [opponentHand])
+
+	useEffect(() => {
+		console.log('useEffect discardPile', discardPile)
+	}, [discardPile])
 
 	const playCard = (card) => {
 		if (playerHand && playerHand.length === 0) {
@@ -122,6 +139,32 @@ const Game = ({ route }) => {
 				username: this.username
 			});
 		}
+	}
+
+	const drawCard = async () => {
+		console.log('draw pile top', drawPile[0])
+
+
+		const card = drawPile[0]
+
+		console.log('draw pile removeTop before', drawPile)
+
+		const removeTop = drawPile.shift()
+
+		console.log('draw pile removeTop after', drawPile)
+
+
+		console.log('removeTop', removeTop)
+
+		setDrawPile(removeTop)
+
+		console.log('draw pile after', drawPile)
+
+
+		await my_channel.trigger("client-draw-card", {
+			card: card,
+			playerHand: playerHand
+		})
 	}
 
 	return (
@@ -136,7 +179,7 @@ const Game = ({ route }) => {
 			{<View
 				style={styles.hand}
 			>
-				{opponentName && opponentHand.length > 0 ? (
+				{opponentName && opponentHand && opponentHand.length > 0 ? (
 					opponentHand.map(
 						(image) =>
 							<Image
@@ -147,7 +190,8 @@ const Game = ({ route }) => {
 							/>
 					)
 				)
-					:
+					: null}
+				{playerHand && playerHand.length > 0 ?
 					(
 						playerHand.map(
 							(image) =>
@@ -158,9 +202,25 @@ const Game = ({ route }) => {
 									alt={`${image}`}
 								/>
 						)
-					)
+					) : null
 				}
 			</View>}
+			<Button
+				disabled={joinUser === '' || gameStarted}
+				onPress={() => startGame()} title="Start Game"
+			/>
+			<TouchableOpacity
+				onPress={() => drawCard()}
+				disabled={!gameStarted}
+			>
+				<Image
+
+					style={styles.card}
+					source={backOfCard}
+					key={`${backOfCard}`}
+					alt={`${backOfCard}`}
+				/>
+			</TouchableOpacity>
 		</ScrollView>
 	);
 }

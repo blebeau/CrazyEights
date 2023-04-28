@@ -64,13 +64,12 @@ const Login = () => {
 					}
 				}
 			});
-			const my_channel = pusher.subscribe(`private-user-${joinUser !== '' ? joinUser : userName}`)
-
+			const my_channel = pusher.subscribe(`presence-game-${joinUser !== '' ? joinUser : userName}`)
 			my_channel.bind("pusher:subscription_error", status => {
 				console.log(JSON.stringify(status))
 				Alert.alert(
 					"Error",
-					`${(status)}`
+					`${(status.error)}`
 				);
 				setLoading(false);
 			});
@@ -78,60 +77,30 @@ const Login = () => {
 			my_channel.bind("pusher:subscription_succeeded", data => {
 				console.log('pusher:subscription_succeeded')
 
-				my_channel.bind("set-deck", data => {
-					console.log('data.drawPile', data);
-				});
-
 				console.log("subscription ok: ", data);
 
 				my_channel.bind("opponent-found", data => {
-					console.log("opponent found: ", data);
 
-					if (joinUser !== '') {
-						console.log('join user navigation')
-						const opponent = joinUser !== '' ? joinUser : userName
 
-						Alert.alert("Opponent found!", `${opponent} will take you on!`);
+					const opponent =
+						userName == data.player_one ? data.player_two : data.player_one;
+					const drawPile = shuffle(deck)
 
-						navigation.navigate("Game", {
-							pusher: pusher,
-							username: userName,
-							// opponent: data.player_two,
-							my_channel: my_channel,
-							// playerHand: playerHand,
-							// opponentHand: opponentHand,
-							// drawPile: drawPile,
-							// discardPile: discardPile
-						});
-					} else {
-						console.log("joinUser ", joinUser);
+					Alert.alert("Opponent found!", `${opponent} will take you on!`);
 
-						const opponent = joinUser !== '' ? joinUser : userName
-						const drawPile = shuffle(deck)
+					setLoading(false);
+					setUserName('');
 
-						// const playerHand = drawPile.splice(0, 8);
+					console.log('my_channel name login', userName, my_channel.name)
 
-						// const opponentHand = drawPile.splice(0, 8);
-
-						// const discardPile = drawPile.splice(0, 1);
-						// console.log('discardPile login', discardPile)
-
-						Alert.alert("Opponent found!", `${opponent} will take you on!`);
-
-						setLoading(false);
-						setUserName('');
-
-						navigation.navigate("Game", {
-							pusher: pusher,
-							username: userName,
-							opponent: data.player_two,
-							my_channel: my_channel,
-							// playerHand: playerHand,
-							// opponentHand: opponentHand,
-							// drawPile: drawPile,
-							// discardPile: discardPile
-						});
-					}
+					navigation.navigate("Game", {
+						pusher: pusher,
+						username: userName,
+						opponent: opponent,
+						my_channel: my_channel,
+						joinUser: joinUser
+					});
+					// }
 				});
 			});
 		}
