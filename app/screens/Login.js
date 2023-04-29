@@ -84,23 +84,31 @@ const Login = () => {
 
 					const opponent =
 						userName == data.player_one ? data.player_two : data.player_one;
-					const drawPile = shuffle(deck)
 
 					Alert.alert("Opponent found!", `${opponent} will take you on!`);
 
 					setLoading(false);
 					setUserName('');
 
-					console.log('my_channel name login', userName, my_channel.name)
+					const drawPileInitial = shuffle(deck)
+
+					const player1Hand = drawPileInitial.splice(0, 8);
+
+					const player2Hand = drawPileInitial.splice(0, 8);
+
+					const discardPileInitial = drawPileInitial.splice(0, 1);
 
 					navigation.navigate("Game", {
 						pusher: pusher,
 						username: userName,
 						opponent: opponent,
 						my_channel: my_channel,
-						joinUser: joinUser
+						joinUser: joinUser,
+						player1Hand: player1Hand,
+						player2Hand: player2Hand,
+						discardPile: discardPileInitial,
+						drawPile: drawPileInitial,
 					});
-					// }
 				});
 			});
 		}
